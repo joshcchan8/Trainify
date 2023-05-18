@@ -1,4 +1,4 @@
-module github.com/joshchan4444/Trainify
+module github.com/trainify
 
 go 1.20
 

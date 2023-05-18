@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/joshchan4444/Trainify/controllers"
+	"github.com/trainify/controllers"
 )
 
 func SetItemRoutes(group *gin.RouterGroup) {

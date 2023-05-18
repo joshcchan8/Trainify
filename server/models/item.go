@@ -28,7 +28,7 @@ type Item struct {
 	ItemID              string   `json:"item_id"`
 	ItemType            itemType `json:"item_type"`
 	ItemName            string   `json:"item_name"`
-	TargetedMuscleGroup []muscle `json:"targeted_muscle_group"`
+	TargetedMuscleGroup muscle   `json:"targeted_muscle_group"`
 	Difficulty          string   `json:"difficulty"`
 	Minutes             int      `json:"minutes"`
 	CaloriesBurned      int      `json:"calories_burned"`
