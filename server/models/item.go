@@ -1,11 +1,11 @@
 package model
 
-type workoutType string
+type itemType string
 type muscle string
 
 const (
-	Workout  workoutType = "workout"
-	Schedule workoutType = "schedule"
+	Workout  itemType = "workout"
+	Schedule itemType = "schedule"
 )
 
 const (
@@ -25,10 +25,11 @@ const (
 )
 
 type Item struct {
-	Type                workoutType `json:"type"`
-	Name                string      `json:"name"`
-	TargetedMuscleGroup []muscle    `json:"targeted muscle group"`
-	Difficulty          int         `json:"difficulty"`
-	Minutes             int         `json:"minutes"`
-	CaloriesBurned      int         `json:"calories burned"`
+	ItemID              string   `json:"item_id"`
+	ItemType            itemType `json:"item_type"`
+	ItemName            string   `json:"item_name"`
+	TargetedMuscleGroup []muscle `json:"targeted_muscle_group"`
+	Difficulty          string   `json:"difficulty"`
+	Minutes             int      `json:"minutes"`
+	CaloriesBurned      int      `json:"calories_burned"`
 }
