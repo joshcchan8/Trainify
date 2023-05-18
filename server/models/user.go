@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type user struct {
+type User struct {
 	ID       string    `json:"id"`
 	Username string    `json:"username"`
 	DOB      time.Time `json:"dob"`
