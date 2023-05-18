@@ -21,6 +21,12 @@ func main() {
 
 	// Router
 	router := gin.Default()
-	routes.SetRoutes(router)
+
+	// Item routes (private)
+	itemRoutes := router.Group("/items")
+	{
+		routes.SetItemRoutes(itemRoutes)
+	}
+
 	router.Run("localhost:3000")
 }

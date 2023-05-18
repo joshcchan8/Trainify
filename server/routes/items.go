@@ -5,6 +5,6 @@ import (
 	"github.com/joshchan4444/Trainify/controllers"
 )
 
-func SetRoutes(router *gin.Engine) {
-	router.GET("/", controllers.GetAllExercises)
+func SetItemRoutes(group *gin.RouterGroup) {
+	group.GET("/", controllers.GetAllExercises)
 }
