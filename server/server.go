@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/joshchan4444/Trainify/routes"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -19,5 +21,6 @@ func main() {
 
 	// Router
 	router := gin.Default()
+	routes.SetRoutes(router)
 	router.Run("localhost:3000")
 }
