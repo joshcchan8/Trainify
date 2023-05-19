@@ -6,5 +6,6 @@ import (
 )
 
 func SetItemRoutes(group *gin.RouterGroup) {
-	group.GET("/", controllers.GetAllExercises)
+	group.GET("/", controllers.GetAllItems)
+	group.POST("/", controllers.CreateItem)
 }

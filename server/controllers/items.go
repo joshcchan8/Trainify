@@ -11,14 +11,13 @@ import (
 	model "github.com/trainify/models"
 )
 
-func GetAllExercises(c *gin.Context) {
+// Gets all the items from the DB for a user
+func GetAllItems(c *gin.Context) {
 
-	rows, err := database.DB.Query("SELECT * FROM items")
+	rows, queryErr := database.DB.Query("SELECT * FROM items")
 
-	if err != nil {
-		c.IndentedJSON(http.StatusOK, gin.H{
-			"message": "get all exercises failed",
-		})
+	if queryErr != nil {
+		log.Fatal("Query Error: ", queryErr)
 		return
 	}
 
@@ -44,15 +43,54 @@ func GetAllExercises(c *gin.Context) {
 
 		jsonConversionErr := json.Unmarshal([]byte(targetedMuscleString), &item.TargetedMuscleGroup)
 		if jsonConversionErr != nil {
-			fmt.Println("Error converting JSON: ", err)
-			return
+			log.Fatal("JSON Conversion Error: ", err)
 		}
 
-		fmt.Println(item)
 		items = append(items, item)
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"items": items,
 	})
+
+	fmt.Print("Items read successfully")
+}
+
+// Creates a new item in the DB for a specific user
+func CreateItem(c *gin.Context) {
+
+	var newItem model.Item
+
+	createItemErr := c.BindJSON(&newItem)
+	if createItemErr != nil {
+		log.Fatal("Creation error: ", createItemErr)
+	}
+
+	stmt, insertionErr := database.DB.Prepare("INSERT INTO items VALUES (?, ?, ?, ?, ?, ?, ?)")
+	if insertionErr != nil {
+		log.Fatal("Insertion error: ", insertionErr)
+	}
+
+	defer stmt.Close()
+
+	jsonData, jsonConversionErr := json.Marshal(newItem.TargetedMuscleGroup)
+	if jsonConversionErr != nil {
+		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
+	}
+
+	_, executionErr := stmt.Exec(
+		newItem.ItemID,
+		newItem.ItemType,
+		newItem.ItemName,
+		newItem.Difficulty,
+		newItem.Minutes,
+		newItem.CaloriesBurned,
+		jsonData,
+	)
+
+	if executionErr != nil {
+		log.Fatal("Execution Error: ", executionErr)
+	}
+
+	fmt.Println("Item created successfully")
 }
