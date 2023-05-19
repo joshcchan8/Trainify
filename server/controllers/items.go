@@ -146,10 +146,9 @@ func GetItem(c *gin.Context) {
 // Updates item with specific ID in DB with new specified data
 func UpdateItem(c *gin.Context) {
 	id := c.Param("id")
-
 	updatedItem := getItemById(id)
-	bindErr := c.BindJSON(&updatedItem)
 
+	bindErr := c.BindJSON(&updatedItem)
 	if bindErr != nil {
 		log.Fatal("Update Error: ", bindErr)
 	}
@@ -197,4 +196,30 @@ func UpdateItem(c *gin.Context) {
 		"updated": updatedItem,
 	})
 	fmt.Println("Item updated successfully")
+}
+
+func DeleteItem(c *gin.Context) {
+	id := c.Param("id")
+	deletedItem := getItemById(id)
+
+	stmt, deleteErr := database.DB.Prepare(
+		`DELETE FROM items
+		WHERE item_id=?`,
+	)
+	if deleteErr != nil {
+		log.Fatal("Deletion Error: ", deleteErr)
+	}
+
+	defer stmt.Close()
+
+	_, executionErr := stmt.Exec(id)
+
+	if executionErr != nil {
+		log.Fatal("Execution Error: ", executionErr)
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"deleted": deletedItem,
+	})
+	fmt.Println("Item deleted successfully")
 }
