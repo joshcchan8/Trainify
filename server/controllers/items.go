@@ -52,7 +52,6 @@ func GetAllItems(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"items": items,
 	})
-
 	fmt.Print("Items read successfully")
 }
 
@@ -66,7 +65,9 @@ func CreateItem(c *gin.Context) {
 		log.Fatal("Creation error: ", createItemErr)
 	}
 
-	stmt, insertionErr := database.DB.Prepare("INSERT INTO items VALUES (?, ?, ?, ?, ?, ?, ?)")
+	stmt, insertionErr := database.DB.Prepare(
+		"INSERT INTO items (item_type, item_name, difficulty, minutes, calories_burned, targeted_muscle_groups) VALUES (?, ?, ?, ?, ?, ?)",
+	)
 	if insertionErr != nil {
 		log.Fatal("Insertion error: ", insertionErr)
 	}
@@ -79,7 +80,6 @@ func CreateItem(c *gin.Context) {
 	}
 
 	_, executionErr := stmt.Exec(
-		newItem.ItemID,
 		newItem.ItemType,
 		newItem.ItemName,
 		newItem.Difficulty,
@@ -92,5 +92,8 @@ func CreateItem(c *gin.Context) {
 		log.Fatal("Execution Error: ", executionErr)
 	}
 
+	c.IndentedJSON(http.StatusCreated, gin.H{
+		"item": newItem,
+	})
 	fmt.Println("Item created successfully")
 }
