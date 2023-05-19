@@ -26,7 +26,7 @@ func GetAllItems(c *gin.Context) {
 
 	for rows.Next() {
 		var item model.Item
-		err := rows.Scan(
+		scanErr := rows.Scan(
 			&item.ItemID,
 			&item.ItemType,
 			&item.ItemName,
@@ -36,14 +36,13 @@ func GetAllItems(c *gin.Context) {
 			&targetedMuscleString,
 		)
 
-		if err != nil {
-			log.Fatal(err)
-			return
+		if scanErr != nil {
+			log.Fatal("Scan Error: ", scanErr)
 		}
 
 		jsonConversionErr := json.Unmarshal([]byte(targetedMuscleString), &item.TargetedMuscleGroup)
 		if jsonConversionErr != nil {
-			log.Fatal("JSON Conversion Error: ", err)
+			log.Fatal("JSON Conversion Error: ", jsonConversionErr)
 		}
 
 		items = append(items, item)
@@ -63,6 +62,11 @@ func CreateItem(c *gin.Context) {
 	createItemErr := c.BindJSON(&newItem)
 	if createItemErr != nil {
 		log.Fatal("Creation error: ", createItemErr)
+	}
+
+	muscleGroupErr := model.ValidateMuscleGroups(newItem.TargetedMuscleGroup)
+	if muscleGroupErr != nil {
+		log.Fatal("Muscle Group Error: ", muscleGroupErr)
 	}
 
 	stmt, insertionErr := database.DB.Prepare(
@@ -96,4 +100,41 @@ func CreateItem(c *gin.Context) {
 		"item": newItem,
 	})
 	fmt.Println("Item created successfully")
+}
+
+func itemById(id string) model.Item {
+	var item model.Item
+	var targetedMuscleString string
+
+	row := database.DB.QueryRow("SELECT * FROM items WHERE item_id=?", id)
+	scanErr := row.Scan(
+		&item.ItemID,
+		&item.ItemType,
+		&item.ItemName,
+		&item.Difficulty,
+		&item.Minutes,
+		&item.CaloriesBurned,
+		&targetedMuscleString,
+	)
+
+	if scanErr != nil {
+		log.Fatal("Scan Error: ", scanErr)
+	}
+
+	jsonConversionErr := json.Unmarshal([]byte(targetedMuscleString), &item.TargetedMuscleGroup)
+	if jsonConversionErr != nil {
+		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
+	}
+
+	return item
+}
+
+func GetItem(c *gin.Context) {
+	id := c.Param("id")
+	item := itemById(id)
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"item": item,
+	})
+	fmt.Println("Item read successfully")
 }
