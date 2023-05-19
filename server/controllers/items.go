@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,7 +22,8 @@ func GetAllExercises(c *gin.Context) {
 		return
 	}
 
-	var data []model.Item
+	var items []model.Item
+	var targetedMuscleString string
 
 	for rows.Next() {
 		var item model.Item
@@ -32,7 +34,7 @@ func GetAllExercises(c *gin.Context) {
 			&item.Difficulty,
 			&item.Minutes,
 			&item.CaloriesBurned,
-			&item.TargetedMuscleGroup,
+			&targetedMuscleString,
 		)
 
 		if err != nil {
@@ -40,11 +42,17 @@ func GetAllExercises(c *gin.Context) {
 			return
 		}
 
+		jsonConversionErr := json.Unmarshal([]byte(targetedMuscleString), &item.TargetedMuscleGroup)
+		if jsonConversionErr != nil {
+			fmt.Println("Error converting JSON: ", err)
+			return
+		}
+
 		fmt.Println(item)
-		data = append(data, item)
+		items = append(items, item)
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"data": data,
+		"items": items,
 	})
 }
