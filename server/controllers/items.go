@@ -59,9 +59,9 @@ func CreateItem(c *gin.Context) {
 
 	var newItem model.Item
 
-	createItemErr := c.BindJSON(&newItem)
-	if createItemErr != nil {
-		log.Fatal("Creation error: ", createItemErr)
+	bindErr := c.BindJSON(&newItem)
+	if bindErr != nil {
+		log.Fatal("Bind Error: ", bindErr)
 	}
 
 	muscleGroupErr := model.ValidateMuscleGroups(newItem.TargetedMuscleGroup)
@@ -69,11 +69,13 @@ func CreateItem(c *gin.Context) {
 		log.Fatal("Muscle Group Error: ", muscleGroupErr)
 	}
 
+	// item_id auto-generated
 	stmt, insertionErr := database.DB.Prepare(
-		"INSERT INTO items (item_type, item_name, difficulty, minutes, calories_burned, targeted_muscle_groups) VALUES (?, ?, ?, ?, ?, ?)",
+		`INSERT INTO items (item_type, item_name, difficulty, minutes, calories_burned, targeted_muscle_groups) 
+		VALUES (?, ?, ?, ?, ?, ?)`,
 	)
 	if insertionErr != nil {
-		log.Fatal("Insertion error: ", insertionErr)
+		log.Fatal("Insertion Error: ", insertionErr)
 	}
 
 	defer stmt.Close()
@@ -102,7 +104,8 @@ func CreateItem(c *gin.Context) {
 	fmt.Println("Item created successfully")
 }
 
-func itemById(id string) model.Item {
+// Helper for GetItem() function
+func getItemById(id string) model.Item {
 	var item model.Item
 	var targetedMuscleString string
 
@@ -129,12 +132,69 @@ func itemById(id string) model.Item {
 	return item
 }
 
+// Gets item with specific ID from DB
 func GetItem(c *gin.Context) {
 	id := c.Param("id")
-	item := itemById(id)
+	item := getItemById(id)
 
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"item": item,
 	})
 	fmt.Println("Item read successfully")
+}
+
+// Updates item with specific ID in DB with new specified data
+func UpdateItem(c *gin.Context) {
+	id := c.Param("id")
+
+	updatedItem := getItemById(id)
+	bindErr := c.BindJSON(&updatedItem)
+
+	if bindErr != nil {
+		log.Fatal("Update Error: ", bindErr)
+	}
+
+	muscleGroupErr := model.ValidateMuscleGroups(updatedItem.TargetedMuscleGroup)
+	if muscleGroupErr != nil {
+		log.Fatal("Muscle Group Error: ", muscleGroupErr)
+	}
+
+	// cannot update item_id or item_type (workout cannot become schedule, and vice versa)
+	stmt, updateErr := database.DB.Prepare(
+		`UPDATE items
+		SET item_name=?,
+			difficulty=?,
+			minutes=?,
+			calories_burned=?,
+			targeted_muscle_groups=?
+		WHERE item_id=?`,
+	)
+	if updateErr != nil {
+		log.Fatal("Insertion error: ", updateErr)
+	}
+
+	defer stmt.Close()
+
+	jsonData, jsonConversionErr := json.Marshal(updatedItem.TargetedMuscleGroup)
+	if jsonConversionErr != nil {
+		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
+	}
+
+	_, executionErr := stmt.Exec(
+		updatedItem.ItemName,
+		updatedItem.Difficulty,
+		updatedItem.Minutes,
+		updatedItem.CaloriesBurned,
+		jsonData,
+		updatedItem.ItemID,
+	)
+
+	if executionErr != nil {
+		log.Fatal("Execution Error: ", executionErr)
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"updated": updatedItem,
+	})
+	fmt.Println("Item updated successfully")
 }
