@@ -11,6 +11,67 @@ import (
 	model "github.com/trainify/models"
 )
 
+// HELPERS
+
+// Helper to bind JSON in request to item
+func bindToItem(c *gin.Context, item *model.Item) {
+	bindErr := c.BindJSON(&item)
+	if bindErr != nil {
+		log.Fatal("Bind Error: ", bindErr)
+	}
+}
+
+// Helper to detect invalid muscle group errors
+func muscleGroupsValidator(muscleGroups []string) {
+	muscleGroupErr := model.ValidateMuscleGroups(muscleGroups)
+	if muscleGroupErr != nil {
+		log.Fatal("Muscle Group Error: ", muscleGroupErr)
+	}
+}
+
+// Helper to convert from string array to json data
+func itemToJson(itemsArray []string) []byte {
+	jsonData, jsonConversionErr := json.Marshal(itemsArray)
+	if jsonConversionErr != nil {
+		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
+	}
+	return jsonData
+}
+
+// Helper to convert from json string to string array
+func jsonToItem(jsonString string, itemAddress *[]string) {
+	jsonConversionErr := json.Unmarshal([]byte(jsonString), itemAddress)
+	if jsonConversionErr != nil {
+		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
+	}
+}
+
+// Helper for GetItem(), UpdateItem(), and DeleteItem() function
+func getItemById(id string) model.Item {
+	var item model.Item
+	var targetedMuscleString string
+
+	row := database.DB.QueryRow("SELECT * FROM items WHERE item_id=?", id)
+	scanErr := row.Scan(
+		&item.ItemID,
+		&item.ItemType,
+		&item.ItemName,
+		&item.Difficulty,
+		&item.Minutes,
+		&item.CaloriesBurned,
+		&targetedMuscleString,
+	)
+
+	if scanErr != nil {
+		log.Fatal("Scan Error: ", scanErr)
+	}
+
+	jsonToItem(targetedMuscleString, &item.TargetedMuscleGroup)
+	return item
+}
+
+// CONTROLLERS
+
 // Gets all the items from the DB for a user
 func GetAllItems(c *gin.Context) {
 
@@ -40,17 +101,11 @@ func GetAllItems(c *gin.Context) {
 			log.Fatal("Scan Error: ", scanErr)
 		}
 
-		jsonConversionErr := json.Unmarshal([]byte(targetedMuscleString), &item.TargetedMuscleGroup)
-		if jsonConversionErr != nil {
-			log.Fatal("JSON Conversion Error: ", jsonConversionErr)
-		}
-
+		jsonToItem(targetedMuscleString, &item.TargetedMuscleGroup)
 		items = append(items, item)
 	}
 
-	c.IndentedJSON(http.StatusOK, gin.H{
-		"items": items,
-	})
+	c.IndentedJSON(http.StatusOK, gin.H{"items": items})
 	fmt.Print("Items read successfully")
 }
 
@@ -59,15 +114,8 @@ func CreateItem(c *gin.Context) {
 
 	var newItem model.Item
 
-	bindErr := c.BindJSON(&newItem)
-	if bindErr != nil {
-		log.Fatal("Bind Error: ", bindErr)
-	}
-
-	muscleGroupErr := model.ValidateMuscleGroups(newItem.TargetedMuscleGroup)
-	if muscleGroupErr != nil {
-		log.Fatal("Muscle Group Error: ", muscleGroupErr)
-	}
+	bindToItem(c, &newItem)
+	muscleGroupsValidator(newItem.TargetedMuscleGroup)
 
 	// item_id auto-generated
 	stmt, insertionErr := database.DB.Prepare(
@@ -80,11 +128,7 @@ func CreateItem(c *gin.Context) {
 
 	defer stmt.Close()
 
-	jsonData, jsonConversionErr := json.Marshal(newItem.TargetedMuscleGroup)
-	if jsonConversionErr != nil {
-		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
-	}
-
+	jsonData := itemToJson(newItem.TargetedMuscleGroup)
 	_, executionErr := stmt.Exec(
 		newItem.ItemType,
 		newItem.ItemName,
@@ -98,38 +142,8 @@ func CreateItem(c *gin.Context) {
 		log.Fatal("Execution Error: ", executionErr)
 	}
 
-	c.IndentedJSON(http.StatusCreated, gin.H{
-		"item": newItem,
-	})
+	c.IndentedJSON(http.StatusCreated, gin.H{"item": newItem})
 	fmt.Println("Item created successfully")
-}
-
-// Helper for GetItem() function
-func getItemById(id string) model.Item {
-	var item model.Item
-	var targetedMuscleString string
-
-	row := database.DB.QueryRow("SELECT * FROM items WHERE item_id=?", id)
-	scanErr := row.Scan(
-		&item.ItemID,
-		&item.ItemType,
-		&item.ItemName,
-		&item.Difficulty,
-		&item.Minutes,
-		&item.CaloriesBurned,
-		&targetedMuscleString,
-	)
-
-	if scanErr != nil {
-		log.Fatal("Scan Error: ", scanErr)
-	}
-
-	jsonConversionErr := json.Unmarshal([]byte(targetedMuscleString), &item.TargetedMuscleGroup)
-	if jsonConversionErr != nil {
-		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
-	}
-
-	return item
 }
 
 // Gets item with specific ID from DB
@@ -137,9 +151,7 @@ func GetItem(c *gin.Context) {
 	id := c.Param("id")
 	item := getItemById(id)
 
-	c.IndentedJSON(http.StatusOK, gin.H{
-		"item": item,
-	})
+	c.IndentedJSON(http.StatusOK, gin.H{"item": item})
 	fmt.Println("Item read successfully")
 }
 
@@ -148,15 +160,8 @@ func UpdateItem(c *gin.Context) {
 	id := c.Param("id")
 	updatedItem := getItemById(id)
 
-	bindErr := c.BindJSON(&updatedItem)
-	if bindErr != nil {
-		log.Fatal("Update Error: ", bindErr)
-	}
-
-	muscleGroupErr := model.ValidateMuscleGroups(updatedItem.TargetedMuscleGroup)
-	if muscleGroupErr != nil {
-		log.Fatal("Muscle Group Error: ", muscleGroupErr)
-	}
+	bindToItem(c, &updatedItem)
+	muscleGroupsValidator(updatedItem.TargetedMuscleGroup)
 
 	// cannot update item_id or item_type (workout cannot become schedule, and vice versa)
 	stmt, updateErr := database.DB.Prepare(
@@ -174,11 +179,7 @@ func UpdateItem(c *gin.Context) {
 
 	defer stmt.Close()
 
-	jsonData, jsonConversionErr := json.Marshal(updatedItem.TargetedMuscleGroup)
-	if jsonConversionErr != nil {
-		log.Fatal("JSON Conversion Error: ", jsonConversionErr)
-	}
-
+	jsonData := itemToJson(updatedItem.TargetedMuscleGroup)
 	_, executionErr := stmt.Exec(
 		updatedItem.ItemName,
 		updatedItem.Difficulty,
@@ -192,9 +193,7 @@ func UpdateItem(c *gin.Context) {
 		log.Fatal("Execution Error: ", executionErr)
 	}
 
-	c.IndentedJSON(http.StatusOK, gin.H{
-		"updated": updatedItem,
-	})
+	c.IndentedJSON(http.StatusOK, gin.H{"updated": updatedItem})
 	fmt.Println("Item updated successfully")
 }
 
@@ -218,8 +217,6 @@ func DeleteItem(c *gin.Context) {
 		log.Fatal("Execution Error: ", executionErr)
 	}
 
-	c.IndentedJSON(http.StatusOK, gin.H{
-		"deleted": deletedItem,
-	})
+	c.IndentedJSON(http.StatusOK, gin.H{"deleted": deletedItem})
 	fmt.Println("Item deleted successfully")
 }
