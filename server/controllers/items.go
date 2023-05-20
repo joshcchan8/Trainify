@@ -13,14 +13,6 @@ import (
 
 // HELPERS
 
-// Helper to bind JSON in request to item
-func bindToItem(c *gin.Context, item *model.Item) {
-	bindErr := c.BindJSON(&item)
-	if bindErr != nil {
-		log.Fatal("Bind Error: ", bindErr)
-	}
-}
-
 // Helper to detect invalid muscle group errors
 func muscleGroupsValidator(muscleGroups []string) {
 	muscleGroupErr := model.ValidateMuscleGroups(muscleGroups)
@@ -66,7 +58,7 @@ func getItemById(id string) model.Item {
 		log.Fatal("Scan Error: ", scanErr)
 	}
 
-	jsonToItem(targetedMuscleString, &item.TargetedMuscleGroup)
+	jsonToItem(targetedMuscleString, &item.TargetedMuscleGroups)
 	return item
 }
 
@@ -101,7 +93,7 @@ func GetAllItems(c *gin.Context) {
 			log.Fatal("Scan Error: ", scanErr)
 		}
 
-		jsonToItem(targetedMuscleString, &item.TargetedMuscleGroup)
+		jsonToItem(targetedMuscleString, &item.TargetedMuscleGroups)
 		items = append(items, item)
 	}
 
@@ -114,8 +106,12 @@ func CreateItem(c *gin.Context) {
 
 	var newItem model.Item
 
-	bindToItem(c, &newItem)
-	muscleGroupsValidator(newItem.TargetedMuscleGroup)
+	bindErr := c.BindJSON(&newItem)
+	if bindErr != nil {
+		log.Fatal("Bind Error: ", bindErr)
+	}
+
+	muscleGroupsValidator(newItem.TargetedMuscleGroups)
 
 	// item_id auto-generated
 	stmt, insertionErr := database.DB.Prepare(
@@ -128,7 +124,7 @@ func CreateItem(c *gin.Context) {
 
 	defer stmt.Close()
 
-	jsonData := itemToJson(newItem.TargetedMuscleGroup)
+	jsonData := itemToJson(newItem.TargetedMuscleGroups)
 	_, executionErr := stmt.Exec(
 		newItem.ItemType,
 		newItem.ItemName,
@@ -160,8 +156,12 @@ func UpdateItem(c *gin.Context) {
 	id := c.Param("id")
 	updatedItem := getItemById(id)
 
-	bindToItem(c, &updatedItem)
-	muscleGroupsValidator(updatedItem.TargetedMuscleGroup)
+	bindErr := c.ShouldBindJSON(&updatedItem)
+	if bindErr != nil {
+		log.Fatal("Bind Error: ", bindErr)
+	}
+
+	muscleGroupsValidator(updatedItem.TargetedMuscleGroups)
 
 	// cannot update item_id or item_type (workout cannot become schedule, and vice versa)
 	stmt, updateErr := database.DB.Prepare(
@@ -173,13 +173,14 @@ func UpdateItem(c *gin.Context) {
 			targeted_muscle_groups=?
 		WHERE item_id=?`,
 	)
+
 	if updateErr != nil {
 		log.Fatal("Insertion error: ", updateErr)
 	}
 
 	defer stmt.Close()
 
-	jsonData := itemToJson(updatedItem.TargetedMuscleGroup)
+	jsonData := itemToJson(updatedItem.TargetedMuscleGroups)
 	_, executionErr := stmt.Exec(
 		updatedItem.ItemName,
 		updatedItem.Difficulty,

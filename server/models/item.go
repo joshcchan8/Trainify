@@ -12,13 +12,13 @@ const (
 )
 
 type Item struct {
-	ItemID              int      `json:"item_id"`
-	ItemType            itemType `json:"item_type"`
-	ItemName            string   `json:"item_name"`
-	Difficulty          string   `json:"difficulty"`
-	Minutes             int      `json:"minutes"`
-	CaloriesBurned      int      `json:"calories_burned"`
-	TargetedMuscleGroup []string `json:"targeted_muscle_group"`
+	ItemID               int      `json:"item_id"`
+	ItemType             itemType `json:"item_type"`
+	ItemName             string   `json:"item_name"`
+	Difficulty           string   `json:"difficulty"`
+	Minutes              int      `json:"minutes"`
+	CaloriesBurned       int      `json:"calories_burned"`
+	TargetedMuscleGroups []string `json:"targeted_muscle_groups"`
 }
 
 // validates whether selected muscle groups are part of the valid list
