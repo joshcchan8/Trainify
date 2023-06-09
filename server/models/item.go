@@ -1,24 +1,18 @@
-package model
+package models
 
 import (
 	"errors"
 )
 
-type itemType string
-
-const (
-	Workout  itemType = "workout"
-	Schedule itemType = "schedule"
-)
-
 type Item struct {
 	ItemID               int      `json:"item_id"`
-	ItemType             itemType `json:"item_type"`
 	ItemName             string   `json:"item_name"`
 	Difficulty           string   `json:"difficulty"`
 	Minutes              int      `json:"minutes"`
 	CaloriesBurned       int      `json:"calories_burned"`
 	TargetedMuscleGroups []string `json:"targeted_muscle_groups"`
+	WorkoutDescription   string   `json:"workout_description"`
+	CreatedBy            int      `json:"created_by"`
 }
 
 // validates whether selected muscle groups are part of the valid list

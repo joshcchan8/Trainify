@@ -1,3 +1,3 @@
 # Trainify
 
-An AI workout generator app created with React, Go, and MySQL.
+A full-stack AI workout generator app created with React, Go, and MySQL.

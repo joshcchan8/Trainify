@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/trainify/database"
+	"github.com/trainify/middleware"
 	"github.com/trainify/routes"
 
 	"github.com/gin-gonic/gin"
@@ -14,13 +15,21 @@ func main() {
 
 	// Router
 	router := gin.Default()
+	router.Use(middleware.CorsMiddleware())
+
+	// User routes (public)
+	userRoutes := router.Group("/users")
+	routes.SetUserRoutes(userRoutes)
 
 	// Item routes (private)
-
 	itemRoutes := router.Group("/items")
-	{
-		routes.SetItemRoutes(itemRoutes)
-	}
+	itemRoutes.Use(middleware.AuthenticationMiddleware())
+	routes.SetItemRoutes(itemRoutes)
 
-	router.Run("localhost:3000")
+	// Profile routes (private)
+	profileRoutes := router.Group("/profiles")
+	profileRoutes.Use(middleware.AuthenticationMiddleware())
+	routes.SetProfileRoutes(profileRoutes)
+
+	router.Run("localhost:8000")
 }

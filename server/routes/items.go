@@ -10,6 +10,7 @@ func SetItemRoutes(group *gin.RouterGroup) {
 	group.GET("/", controllers.GetAllItems)
 	group.POST("/", controllers.CreateItem)
 	group.GET("/:id", controllers.GetItem)
-	group.PATCH("/:id", controllers.UpdateItem)
+	group.PATCH("/update/:id", controllers.UpdateItem)
+	group.PATCH("/regenerate/:id", controllers.RegenerateItem)
 	group.DELETE("/:id", controllers.DeleteItem)
 }
