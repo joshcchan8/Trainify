@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/trainify/database"
 	models "github.com/trainify/models"
+	"github.com/trainify/queries"
 )
 
 // Users only have a single profile
@@ -18,13 +19,13 @@ func GetProfileByUserID(c *gin.Context) models.UserProfile {
 	var profile models.UserProfile
 	userID := unloadPayload(c)
 
-	row1 := database.DB.QueryRow(`SELECT profile_id FROM users WHERE user_id=?`, userID)
+	row1 := database.DB.QueryRow(queries.GetProfileIdFromUserIdQuery, userID)
 	scanErr1 := row1.Scan(&profile.ProfileID)
 	if scanErr1 != nil {
 		log.Fatal("Scan Error: ", scanErr1)
 	}
 
-	row2 := database.DB.QueryRow(`SELECT * FROM user_profiles WHERE profile_id=?`, profile.ProfileID)
+	row2 := database.DB.QueryRow(queries.GetProfileQuery, profile.ProfileID)
 	scanErr2 := row2.Scan(
 		&profile.ProfileID,
 		&profile.Age,
@@ -73,20 +74,7 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	stmt, updateErr := database.DB.Prepare(
-		`UPDATE user_profiles
-		SET age=?,
-			weight=?,
-			height=?,
-			max_push_ups=?,
-			avg_push_ups=?,
-			max_pull_ups=?,
-			avg_pull_ups=?,
-			max_squat=?,
-			avg_squat=?,
-			max_bench=?,
-			avg_bench=?,
-			cardio_level=?
-		WHERE profile_id=?`,
+		queries.UpdateProfileQuery,
 	)
 
 	if updateErr != nil {

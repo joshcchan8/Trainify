@@ -13,6 +13,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/trainify/database"
 	models "github.com/trainify/models"
+	"github.com/trainify/queries"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,10 +22,7 @@ import (
 // Creates an empty profile for a new user (where they can update later)
 func createEmptyProfile() sql.Result {
 	result, insertionErr := database.DB.Exec(
-		`INSERT INTO user_profiles
-		(age, weight, height, max_push_ups, avg_push_ups, max_pull_ups, 
-			avg_pull_ups, max_squat, avg_squat, max_bench, avg_bench, cardio_level)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		queries.CreateEmptyProfileQuery,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	if insertionErr != nil {
@@ -109,8 +107,7 @@ func Register(c *gin.Context) {
 
 	// Register user in DB, no user_id needed
 	stmt, registerErr := database.DB.Prepare(
-		`INSERT INTO users (username, email, hashed_password, profile_id)
-		VALUES (?, ?, ?, ?)`,
+		queries.CreateUserQuery,
 	)
 
 	if registerErr != nil {
@@ -165,7 +162,7 @@ func Login(c *gin.Context) {
 	}
 
 	// Retrieve Password from DB
-	row := database.DB.QueryRow("SELECT * FROM users WHERE email=?", loginInfo.Email)
+	row := database.DB.QueryRow(queries.GetUserByEmailQuery, loginInfo.Email)
 	scanErr := row.Scan(
 		&user.UserID,
 		&user.Username,
@@ -215,10 +212,7 @@ func UpdateUser(c *gin.Context) {
 
 	// Update logged in user info with updated user info
 	_, executionErr := database.DB.Exec(
-		`UPDATE users
-		SET username=?,
-			hashed_password=?
-		WHERE user_id=?`,
+		queries.UpdateUserQuery,
 		updatedUser.Username,
 		updatedUser.Password,
 		userID,
@@ -229,10 +223,12 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	// Get remaining data of user for JSON response
-	row := database.DB.QueryRow("SELECT user_id, email, profile_id FROM users WHERE user_id=?", userID)
+	row := database.DB.QueryRow(queries.GetUserQuery, userID)
 	scanErr := row.Scan(
 		&updatedUser.UserID,
+		&updatedUser.Username,
 		&updatedUser.Email,
+		&updatedUser.Password,
 		&updatedUser.ProfileID,
 	)
 
@@ -251,7 +247,7 @@ func DeleteUser(c *gin.Context) {
 	userID := unloadPayload(c)
 
 	// Retrieve user info of logged in user from DB
-	row := database.DB.QueryRow("SELECT * FROM users WHERE user_id=?", userID)
+	row := database.DB.QueryRow(queries.GetUserQuery, userID)
 	scanErr := row.Scan(
 		&user.UserID,
 		&user.Username,
@@ -265,9 +261,9 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	// Prepare to delete associated profile and items
-	deleteProfile, profileErr := database.DB.Prepare("DELETE FROM user_profiles WHERE profile_id=?")
-	deleteItems, itemsErr := database.DB.Prepare("DELETE FROM items WHERE created_by=?")
-	deleteUser, userErr := database.DB.Prepare("DELETE FROM users WHERE user_id=?")
+	deleteProfile, profileErr := database.DB.Prepare(queries.DeleteProfileQuery)
+	deleteItems, itemsErr := database.DB.Prepare(queries.DeleteAllItemsQuery)
+	deleteUser, userErr := database.DB.Prepare(queries.DeleteUserQuery)
 
 	if profileErr != nil || itemsErr != nil || userErr != nil {
 		log.Fatal("Statement Preparation Error")

@@ -14,6 +14,7 @@ import (
 	"github.com/trainify/database"
 	"github.com/trainify/middleware"
 	models "github.com/trainify/models"
+	"github.com/trainify/queries"
 )
 
 // HELPERS
@@ -36,13 +37,13 @@ func setupInputs(item models.Item, userID int) (input, models.UserProfile) {
 	var profileID int
 	var profile models.UserProfile
 
-	row1 := database.DB.QueryRow(`SELECT profile_id FROM users WHERE user_id=?`, userID)
+	row1 := database.DB.QueryRow(queries.GetProfileIdFromUserIdQuery, userID)
 	scanErr1 := row1.Scan(&profileID)
 	if scanErr1 != nil {
 		log.Fatal("Scan Error: ", scanErr1)
 	}
 
-	row2 := database.DB.QueryRow(`SELECT * FROM user_profiles WHERE profile_id=?`, profileID)
+	row2 := database.DB.QueryRow(queries.GetProfileQuery, profileID)
 	scanErr2 := row2.Scan(
 		&profile.ProfileID,
 		&profile.Age,
@@ -161,7 +162,7 @@ func getItemById(id string, userID int) models.Item {
 	var item models.Item
 	var targetedMuscleString string
 
-	row := database.DB.QueryRow("SELECT * FROM items WHERE item_id=? AND created_by=?", id, userID)
+	row := database.DB.QueryRow(queries.GetItemQuery, id, userID)
 	scanErr := row.Scan(
 		&item.ItemID,
 		&item.ItemName,
@@ -187,7 +188,7 @@ func getItemById(id string, userID int) models.Item {
 func GetAllItems(c *gin.Context) {
 
 	userID := unloadPayload(c)
-	rows, queryErr := database.DB.Query("SELECT * FROM items WHERE created_by=?", userID)
+	rows, queryErr := database.DB.Query(queries.GetAllItemsQuery, userID)
 
 	if queryErr != nil {
 		log.Fatal("Query Error: ", queryErr)
@@ -243,8 +244,7 @@ func CreateItem(c *gin.Context) {
 
 	// item_id auto-generated
 	stmt, insertionErr := database.DB.Prepare(
-		`INSERT INTO items (item_name, difficulty, minutes, calories_burned, targeted_muscle_groups, workout_description, created_by) 
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		queries.CreateItemQuery,
 	)
 	if insertionErr != nil {
 		log.Fatal("Insertion Error: ", insertionErr)
@@ -361,15 +361,7 @@ func RegenerateItem(c *gin.Context) {
 
 	// item_id auto-generated
 	stmt, updateErr := database.DB.Prepare(
-		`UPDATE items 
-		SET item_name=?,
-			difficulty=?,
-			minutes=?,
-			calories_burned=?,
-			targeted_muscle_groups=?, 
-			workout_description=?,
-			created_by=? 
-		WHERE item_id=?`,
+		queries.UpdateItemQuery,
 	)
 	if updateErr != nil {
 		log.Fatal("Insertion Error: ", updateErr)
@@ -403,8 +395,7 @@ func DeleteItem(c *gin.Context) {
 	deletedItem := getItemById(id, userID)
 
 	stmt, deleteErr := database.DB.Prepare(
-		`DELETE FROM items
-		WHERE item_id=?`,
+		queries.DeleteItemQuery,
 	)
 	if deleteErr != nil {
 		log.Fatal("Deletion Error: ", deleteErr)
